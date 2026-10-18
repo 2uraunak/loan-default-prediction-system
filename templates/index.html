@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loan Default Prediction & Credit Risk System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background: #0c1222; color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .hero { background: linear-gradient(135deg, #1e1b4b 0%, #0c1222 100%); padding: 35px 0 20px; border-bottom: 1px solid #1e293b; }
+        .card { background: #131d35; border: 1px solid #1e293b; border-radius: 12px; }
+        .form-control { background: #0b1120; border: 1px solid #334155; color: #f8fafc; }
+        .form-control:focus { background: #0b1120; border-color: #3b82f6; color: #f8fafc; }
+        .risk-gauge { width: 140px; height: 140px; border-radius: 50%; border: 6px solid #3b82f6; display: flex; align-items: center; justify-content: center; flex-direction: column; margin: 0 auto; background: #0b1120; }
+        .risk-val { font-size: 2.2rem; font-weight: 700; color: #60a5fa; }
+    </style>
+</head>
+<body>
+    <div class="hero text-center">
+        <div class="container">
+            <span class="badge bg-success mb-2"><i class="fas fa-landmark me-1"></i> Fintech Machine Learning</span>
+            <h1 class="fw-bold">Loan Default Prediction System</h1>
+            <p class="text-secondary max-w-600 mx-auto">Credit risk scoring and underwriting default probability powered by Random Forest ensemble classification.</p>
+        </div>
+    </div>
+
+    <div class="container py-4">
+        <div class="row g-4">
+            <div class="col-lg-7">
+                <div class="card p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold mb-0"><i class="fas fa-user-shield text-primary me-2"></i>Borrower Financial Profile</h5>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-success" onclick="loadProfile('prime')">Prime Borrower</button>
+                            <button class="btn btn-outline-danger" onclick="loadProfile('subprime')">Subprime Profile</button>
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label text-secondary small fw-bold">Annual Income (₹)</label>
+                            <input type="number" id="incomeInput" class="form-control" value="750000">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-secondary small fw-bold">Credit Score (CIBIL 300-850)</label>
+                            <input type="number" id="scoreInput" class="form-control" value="760">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-secondary small fw-bold">Requested Loan Amount (₹)</label>
+                            <input type="number" id="loanInput" class="form-control" value="250000">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-secondary small fw-bold">Debt-to-Income Ratio (0.05 - 0.70)</label>
+                            <input type="number" step="0.01" id="dtiInput" class="form-control" value="0.22">
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label text-secondary small fw-bold">Employment Duration (Years)</label>
+                            <input type="number" id="empInput" class="form-control" value="6">
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary btn-lg fw-bold w-100 mt-4" onclick="evaluateRisk()">
+                        <i class="fas fa-calculator me-2"></i>Evaluate Credit Risk & Default Probability
+                    </button>
+                </div>
+            </div>
+
+            <div class="col-lg-5">
+                <div class="card p-4 h-100">
+                    <h5 class="fw-bold mb-3 border-bottom pb-2 border-secondary"><i class="fas fa-balance-scale text-info me-2"></i>Underwriting Decision</h5>
+                    
+                    <div class="text-center my-3">
+                        <div class="risk-gauge mb-2">
+                            <span class="risk-val" id="riskPct">12.4%</span>
+                            <small class="text-secondary">Default Risk</small>
+                        </div>
+                        <h4 class="fw-bold mt-2" id="verdictText">APPROVED (Prime Rate)</h4>
+                        <span class="badge bg-success" id="tierBadge">Low Default Risk</span>
+                    </div>
+
+                    <div class="p-3 rounded bg-dark border border-secondary mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="text-secondary">Recommended Pricing:</span>
+                            <strong class="text-success" id="aprText">8.49% APR</strong>
+                        </div>
+                    </div>
+
+                    <h6 class="fw-bold text-light mb-2"><i class="fas fa-info-circle text-primary me-2"></i>Key Underwriting Factors</h6>
+                    <div id="driversList" class="small text-secondary"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function loadProfile(type) {
+            if (type === 'prime') {
+                document.getElementById('incomeInput').value = 950000;
+                document.getElementById('scoreInput').value = 790;
+                document.getElementById('loanInput').value = 200000;
+                document.getElementById('dtiInput').value = 0.18;
+                document.getElementById('empInput').value = 8;
+            } else {
+                document.getElementById('incomeInput').value = 280000;
+                document.getElementById('scoreInput').value = 540;
+                document.getElementById('loanInput').value = 350000;
+                document.getElementById('dtiInput').value = 0.58;
+                document.getElementById('empInput').value = 1;
+            }
+            evaluateRisk();
+        }
+
+        async function evaluateRisk() {
+            const income = document.getElementById('incomeInput').value;
+            const credit_score = document.getElementById('scoreInput').value;
+            const loan_amount = document.getElementById('loanInput').value;
+            const dti = document.getElementById('dtiInput').value;
+            const emp_length = document.getElementById('empInput').value;
+
+            const res = await fetch('/predict', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({income, credit_score, loan_amount, dti, emp_length})
+            });
+            const data = await res.json();
+
+            document.getElementById('riskPct').innerText = data.default_probability + '%';
+            document.getElementById('verdictText').innerText = data.verdict;
+            document.getElementById('verdictText').className = 'fw-bold mt-2 text-' + data.verdict_class;
+            document.getElementById('tierBadge').innerText = data.risk_tier;
+            document.getElementById('tierBadge').className = 'badge bg-' + data.verdict_class;
+            document.getElementById('aprText').innerText = data.apr;
+
+            document.getElementById('driversList').innerHTML = data.drivers.map(d => 
+                `<p class="mb-1"><i class="fas fa-chevron-right text-info me-2"></i>${d}</p>`
+            ).join('');
+        }
+
+        evaluateRisk();
+    </script>
+</body>
+</html>
